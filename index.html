@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Visualizer</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            border: 2px dashed #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background-color: #111;
+        }
+        
+        .file-info {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+        
+        .progress {
+            display: none;
+            margin: 20px 0;
+            color: #888;
+        }
+        
+        .footer {
+            color: #888;
+            font-size: 0.8em;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .button-container {
+            margin-top: 200px;
+        }
+
+        button {
+            background: #00ffff;  /* Electric blue */
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 15px;
+            display: block;
+            width: 100%;
+            max-width: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .share-button {
+            background: #1DA1F2;  /* X's brand color */
+            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .share-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        button:hover {
+            background: #00ccff;  /* Slightly darker blue on hover */
+            transform: translateY(-1px);  /* Subtle lift effect */
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);  
+        }
+
+        .share-button:hover {
+            background: #1a8cd8;  /* Darker shade for X button */
+            box-shadow: 0 0 15px rgba(29, 161, 242, 0.5);
+        }
+
+        .file-types {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .file-type {
+            color: #00ffff;  /* Electric blue to match buttons */
+            font-family: monospace;
+        }
+
+        h1 {
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            margin-bottom: 10px;  /* Add space below title */
+        }
+
+        .tagline {
+            color: #888;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+    </style>
+<!-- Add this before closing </head> tag -->
+<script>
+    // Enable live reload
+    document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] +
+    ':35729/livereload.js?snipver=1"></' + 'script>')
+</script>
+</head></head>
+<body>
+    
+    <div class="container">
+        <h1>Audio Visualizer</h1>
+        <p class="tagline">
+            Add audio visual effects to your Google LM voice overview to share on X, YouTube, and more!
+        </p>
+        <div class="upload-area">
+            <p class="file-types">Choose between these file types: 
+                <span class="file-type">.wav</span>, 
+                <span class="file-type">.mp3</span>, 
+                <span class="file-type">.m4a</span>
+            </p>
+            <form id="uploadForm">
+                <input type="file" id="audioFile" accept=".wav,.mp3,.m4a" required>
+                <div class="button-container">
+                    <button type="submit">Create Visualization</button>
+                </div>
+            </form>
+            <p class="file-info">Output will be saved as an MP4 video file</p>
+        </div>
+        <div class="progress" id="progress">
+            Processing... Please wait...
+        </div>
+        <button onclick="shareOnX()" class="share-button">
+            <svg viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            Share on X
+        </button>
+        <div class="footer">
+            <div class="footer">
+                ᡕᠵ᠊ᡃ࡚ࠢ࠘ ⸝່ࠡࠣ᠊߯᠆ࠣ࠘ᡁࠣ࠘᠊᠊ࠢ࠘𐡏~♡  PiXabo -- 2024
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileField = document.getElementById('audioFile');
+            
+            formData.append('file', fileField.files[0]);
+            
+            document.getElementById('progress').style.display = 'block';
+            
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `visualization_${fileField.files[0].name}.mp4`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    alert('Error processing file');
+                }
+            } catch (error) {
+                alert('Error uploading file');
+            } finally {
+                document.getElementById('progress').style.display = 'none';
+            }
+        };
+
+        function shareOnX() {
+            const text = "Check out this audio visualization I created!";
+            const url = window.location.href;
+            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+            window.open(shareUrl, '_blank', 'width=550,height=420');
+        }
+    </script>
+</body>
+</html> 
