@@ -1,30 +1,15 @@
 from flask import Flask, request, send_file, render_template
 import os
-from werkzeug.utils import secure_filename
+from visualization_star import create_audio_visualization as create_visualization
 import uuid
-from visualization import create_audio_visualization  # your current script
+import subprocess
 
 app = Flask(__name__)
 
-# Configure upload settings
-UPLOAD_FOLDER = 'temp_files'
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'm4a'}
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def cleanup_temp_files(session_id):
-    """Remove temporary files after processing"""
-    temp_audio = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}_audio.*")
-    temp_video = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}_output.mp4")
-    for file in [temp_audio, temp_video]:
-        try:
-            os.remove(file)
-        except:
-            pass
+# Configure upload folder
+UPLOAD_FOLDER = 'private/temp_files'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/')
 def index():
@@ -38,32 +23,30 @@ def process_audio():
     file = request.files['file']
     if file.filename == '':
         return 'No file selected', 400
+
+    # Generate unique filename
+    filename = str(uuid.uuid4())
+    audio_path = os.path.join(UPLOAD_FOLDER, f"{filename}.wav")
+    video_path = os.path.join(UPLOAD_FOLDER, f"{filename}.mp4")
     
-    if file and allowed_file(file.filename):
-        # Generate unique session ID
-        session_id = str(uuid.uuid4())
-        
-        # Save uploaded file
-        filename = secure_filename(file.filename)
-        temp_audio_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}_audio.{filename.split('.')[-1]}")
-        temp_video_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{session_id}_output.mp4")
-        
-        file.save(temp_audio_path)
-        
-        try:
-            # Create visualization
-            create_audio_visualization(temp_audio_path, temp_video_path)
-            
-            # Send file to user
-            response = send_file(
-                temp_video_path,
-                as_attachment=True,
-                download_name=f"visualization_{filename}.mp4"
-            )
-            
-            # Cleanup after sending
-            @response.call_on_close
-        except Exception as e:
-            return f"Error creating visualization: {e}", 500
+    # Convert m4a to wav if needed
+    if file.filename.endswith('.m4a'):
+        temp_m4a = os.path.join(UPLOAD_FOLDER, f"{filename}.m4a")
+        file.save(temp_m4a)
+        subprocess.run(['ffmpeg', '-i', temp_m4a, audio_path])
+        os.remove(temp_m4a)  # Clean up
+    else:
+        file.save(audio_path)
     
-    return 'Processing complete', 200 
+    # Create visualization
+    create_visualization(audio_path, video_path)
+    
+    return {'video_id': filename}
+
+@app.route('/download/<video_id>')
+def download(video_id):
+    video_path = os.path.join(UPLOAD_FOLDER, f"{video_id}.mp4")
+    return send_file(video_path, as_attachment=True)
+
+if __name__ == '__main__':
+    app.run(debug=True) 
