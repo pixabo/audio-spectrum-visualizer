@@ -29,16 +29,20 @@ def process_audio():
     audio_path = os.path.join(UPLOAD_FOLDER, f"{filename}.wav")
     video_path = os.path.join(UPLOAD_FOLDER, f"{filename}.mp4")
     
+    print(f"Processing file: {file.filename}")  # Debug
+    print(f"Saving to: {audio_path}")          # Debug
+    
     # Convert m4a to wav if needed
     if file.filename.endswith('.m4a'):
         temp_m4a = os.path.join(UPLOAD_FOLDER, f"{filename}.m4a")
+        print(f"Converting {temp_m4a} to {audio_path}")  # Debug
         file.save(temp_m4a)
-        subprocess.run(['ffmpeg', '-i', temp_m4a, audio_path])
-        os.remove(temp_m4a)  # Clean up
+        subprocess.run(['ffmpeg', '-i', temp_m4a, audio_path], capture_output=True)
+        os.remove(temp_m4a)
     else:
         file.save(audio_path)
     
-    # Create visualization
+    print(f"Creating visualization at: {video_path}")  # Debug
     create_visualization(audio_path, video_path)
     
     return {'video_id': filename}
