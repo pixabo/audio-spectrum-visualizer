@@ -4,18 +4,22 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.animation import FuncAnimation
 import os
+import time
 
 def create_audio_visualization(audio_path, output_path):
-    print(f"Starting visualization for {audio_path}")
+    print(f"\nStarting visualization process...")
+    start_time = time.time()
     
     # Set parameters
     fps = 30
+    print(f"Using FPS: {fps}")
     
     try:
         # Load the audio file
-        print("Loading audio file...")
+        print(f"Loading audio file: {audio_path}")
         y, sr = librosa.load(audio_path)
         print(f"Audio loaded: {len(y)} samples, {sr}Hz")
+        print(f"Duration: {len(y)/sr:.2f} seconds")
         
         # Calculate the spectrogram
         print("Calculating spectrogram...")
@@ -23,34 +27,34 @@ def create_audio_visualization(audio_path, output_path):
         D_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
         print(f"Spectrogram shape: {D_db.shape}")
         
-        # Create the figure and axis
+        # Create the figure
+        print("Creating matplotlib figure...")
         fig, ax = plt.subplots(figsize=(12, 8), facecolor='black')
         ax.set_facecolor('black')
         
-        # Initialize the visualization
-        img = ax.imshow(D_db, aspect='auto', origin='lower', 
-                       cmap='magma', animated=True)
+        # Initialize visualization
+        img = ax.imshow(D_db, aspect='auto', origin='lower', cmap='magma', animated=True)
         plt.colorbar(img, ax=ax)
-        
-        # Remove axes for cleaner look
         plt.axis('off')
         
         # Animation function
         def update(frame):
-            # Rotate the data
             data = np.roll(D_db, frame, axis=1)
             img.set_array(data)
             return [img]
         
-        # Create the animation
-        frames = D_db.shape[1]  # Number of frames based on audio length
-        anim = FuncAnimation(fig, update, frames=frames, 
-                            interval=1000/fps, blit=True)
+        # Create and save animation
+        print(f"Creating animation with {D_db.shape[1]} frames...")
+        anim = FuncAnimation(fig, update, frames=D_db.shape[1], 
+                           interval=1000/fps, blit=True)
         
-        # Save the animation
-        print(f"Saving animation to {output_path}")
+        print(f"Saving animation to: {output_path}")
         anim.save(output_path, fps=fps, writer='ffmpeg')
-        print("Animation saved successfully")
+        
+        plt.close()
+        
+        end_time = time.time()
+        print(f"Visualization complete! Time taken: {end_time - start_time:.2f} seconds")
         
     except Exception as e:
         print(f"Error in visualization: {str(e)}")
