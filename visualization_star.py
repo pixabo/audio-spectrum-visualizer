@@ -10,46 +10,47 @@ def create_audio_visualization(audio_path, output_path):
     print(f"\nStarting visualization process...")
     start_time = time.time()
     
-    # Set parameters
-    fps = 30
-    print(f"Using FPS: {fps}")
+    # Set parameters - reduced for faster processing
+    fps = 24  # Reduced from 30
+    hop_length = 512  # Increase for faster processing
+    n_fft = 2048  # Reduced window size
     
     try:
-        # Load the audio file
+        # Load audio with reduced duration
         print(f"Loading audio file: {audio_path}")
-        y, sr = librosa.load(audio_path)
+        y, sr = librosa.load(audio_path, duration=60)  # Limit to 60 seconds
         print(f"Audio loaded: {len(y)} samples, {sr}Hz")
-        print(f"Duration: {len(y)/sr:.2f} seconds")
         
-        # Calculate the spectrogram
+        # Calculate spectrogram with optimized parameters
         print("Calculating spectrogram...")
-        D = librosa.stft(y)
+        D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length)
         D_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+        
+        # Reduce spectrogram size
+        D_db = D_db[::2, ::2]  # Downsample by factor of 2
         print(f"Spectrogram shape: {D_db.shape}")
         
-        # Create the figure
+        # Create figure with smaller size
         print("Creating matplotlib figure...")
-        fig, ax = plt.subplots(figsize=(12, 8), facecolor='black')
+        fig, ax = plt.subplots(figsize=(8, 6), facecolor='black')
         ax.set_facecolor('black')
         
-        # Initialize visualization
-        img = ax.imshow(D_db, aspect='auto', origin='lower', cmap='magma', animated=True)
-        plt.colorbar(img, ax=ax)
+        img = ax.imshow(D_db, aspect='auto', origin='lower', 
+                       cmap='magma', animated=True)
         plt.axis('off')
         
-        # Animation function
         def update(frame):
             data = np.roll(D_db, frame, axis=1)
             img.set_array(data)
             return [img]
         
-        # Create and save animation
-        print(f"Creating animation with {D_db.shape[1]} frames...")
-        anim = FuncAnimation(fig, update, frames=D_db.shape[1], 
+        print(f"Creating animation...")
+        anim = FuncAnimation(fig, update, frames=min(500, D_db.shape[1]), 
                            interval=1000/fps, blit=True)
         
         print(f"Saving animation to: {output_path}")
-        anim.save(output_path, fps=fps, writer='ffmpeg')
+        anim.save(output_path, fps=fps, writer='ffmpeg', 
+                 bitrate=2000)  # Reduced bitrate
         
         plt.close()
         
