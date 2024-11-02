@@ -6,43 +6,55 @@ from matplotlib.animation import FuncAnimation
 import os
 
 def create_audio_visualization(audio_path, output_path):
+    print(f"Starting visualization for {audio_path}")
+    
     # Set parameters
     fps = 30
     
-    # Load the audio file
-    y, sr = librosa.load(audio_path)
-    
-    # Calculate the spectrogram
-    D = librosa.stft(y)
-    D_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
-    
-    # Create the figure and axis
-    fig, ax = plt.subplots(figsize=(12, 8), facecolor='black')
-    ax.set_facecolor('black')
-    
-    # Initialize the visualization
-    img = ax.imshow(D_db, aspect='auto', origin='lower', 
-                   cmap='magma', animated=True)
-    plt.colorbar(img, ax=ax)
-    
-    # Remove axes for cleaner look
-    plt.axis('off')
-    
-    # Animation function
-    def update(frame):
-        # Rotate the data
-        data = np.roll(D_db, frame, axis=1)
-        img.set_array(data)
-        return [img]
-    
-    # Create the animation
-    frames = D_db.shape[1]  # Number of frames based on audio length
-    anim = FuncAnimation(fig, update, frames=frames, 
-                        interval=1000/fps, blit=True)
-    
-    # Save the animation
-    anim.save(output_path, fps=fps, writer='ffmpeg')
-    plt.close()
+    try:
+        # Load the audio file
+        print("Loading audio file...")
+        y, sr = librosa.load(audio_path)
+        print(f"Audio loaded: {len(y)} samples, {sr}Hz")
+        
+        # Calculate the spectrogram
+        print("Calculating spectrogram...")
+        D = librosa.stft(y)
+        D_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+        print(f"Spectrogram shape: {D_db.shape}")
+        
+        # Create the figure and axis
+        fig, ax = plt.subplots(figsize=(12, 8), facecolor='black')
+        ax.set_facecolor('black')
+        
+        # Initialize the visualization
+        img = ax.imshow(D_db, aspect='auto', origin='lower', 
+                       cmap='magma', animated=True)
+        plt.colorbar(img, ax=ax)
+        
+        # Remove axes for cleaner look
+        plt.axis('off')
+        
+        # Animation function
+        def update(frame):
+            # Rotate the data
+            data = np.roll(D_db, frame, axis=1)
+            img.set_array(data)
+            return [img]
+        
+        # Create the animation
+        frames = D_db.shape[1]  # Number of frames based on audio length
+        anim = FuncAnimation(fig, update, frames=frames, 
+                            interval=1000/fps, blit=True)
+        
+        # Save the animation
+        print(f"Saving animation to {output_path}")
+        anim.save(output_path, fps=fps, writer='ffmpeg')
+        print("Animation saved successfully")
+        
+    except Exception as e:
+        print(f"Error in visualization: {str(e)}")
+        raise
 
 def main():
     print("\nWelcome to Audio Visualizer!")
